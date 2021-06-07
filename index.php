@@ -1,13 +1,23 @@
 <?php
 require_once("rest.php");
 
+// Returns the contents of a file
+function file_contents($path) {
+    $str = @file_get_contents($path);
+    if ($str === FALSE) {
+        throw new Exception("Cannot access '$path' to read contents.");
+    } else {
+        return $str;
+    }
+}
+
 function convertCurrencyXE($amount, $from, $to){
     $from = strtoupper($from);
     $to = strtoupper($to);
     try {
-        $data = file_get_contents("https://www.xe.com/currencyconverter/convert/?Amount=$amount&From=$from&To=$to");
+        $data = file_contents("https://www.xe.com/currencyconverter/convert/?Amount=$amount&From=$from&To=$to");
     } catch (Exception $e) {
-        return -1;
+        return -2;
     }
 
 	//var_dump($data);
