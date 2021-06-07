@@ -2,7 +2,14 @@
 require_once("rest.php");
 
 function convertCurrencyXE($amount, $from, $to){
-	$data = file_get_contents("https://www.xe.com/currencyconverter/convert/?Amount=$amount&From=$from&To=$to");
+    $from = strtoupper($from);
+    $to = strtoupper($to);
+    try {
+        $data = file_get_contents("https://www.xe.com/currencyconverter/convert/?Amount=$amount&From=$from&To=$to");
+    } catch (Exception $e) {
+        return -1;
+    }
+
 	//var_dump($data);
 	$doc = new DOMDocument;
 	libxml_use_internal_errors(true);
