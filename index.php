@@ -74,7 +74,7 @@ $from = $rest->_request['from'];
 $to = $rest->_request['to'];
 $amount = 1;
 if(isset($rest->_request['amount'])){
-    $amount = (int)$rest->_request['amount'];
+    $amount = floatValue($rest->_request['amount']);
 }
 
 $doc = getDOMXPath($amount, $from, $to);
