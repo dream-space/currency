@@ -1,8 +1,55 @@
 <?php
 require_once("rest.php");
 
+function getDOMXPath($amount, $from, $to){
+    $from = strtoupper($from);
+    $to = strtoupper($to);
+    try {
+        $data = fileContents(
+            "https://www.xe.com/en/currencyconverter/convert/?Amount=$amount&From=$from&To=$to".'&t='.mt_rand());
+    } catch (Exception $e) {
+        return -2;
+    }
+
+    //var_dump($data);
+    $doc = new DOMDocument;
+    libxml_use_internal_errors(true);
+    $doc->loadHTML($data);
+    libxml_use_internal_errors(false);
+    return $doc;
+}
+
+function getRateValue($doc){
+	$xpath = new DOMXPath($doc);
+	$result = $xpath->query('//p[starts-with(@class,"result__BigRate")]');
+	if($result->length > 0) {
+	  $node = $result->item(0);
+	  $value = $node->nodeValue;
+	  return floatValue(explode(" ", $value)[0]);
+	} else {
+	  return -1;
+	}
+}
+
+function getDateValue($doc){
+    $result_arr = array(
+        'date' => '',
+        'date_time' => 0
+    );
+    $xpath = new DOMXPath($doc);
+    $result = $xpath->query('//div[starts-with(@class,"result__LiveSubText")]');
+    if($result->length > 0) {
+        $node = $result->item(0);
+        $value = $node->nodeValue;
+        $value = explode("Last updated ", $value)[1];
+        $result_arr['date'] = $value;
+        $result_arr['date_time'] = strtotime($value);
+    }
+    return $result_arr;
+}
+
 // Returns the contents of a file
-function file_contents($path) {
+function fileContents($path) {
     $str = @file_get_contents($path);
     if ($str === FALSE) {
         throw new Exception("Cannot access '$path' to read contents.");
@@ -11,30 +58,11 @@ function file_contents($path) {
     }
 }
 
-function convertCurrencyXE($amount, $from, $to){
-    $from = strtoupper($from);
-    $to = strtoupper($to);
-    try {
-        $data = file_contents("https://www.xe.com/currencyconverter/convert/?Amount=$amount&From=$from&To=$to");
-    } catch (Exception $e) {
-        return -2;
-    }
 
-	//var_dump($data);
-	$doc = new DOMDocument;
-	libxml_use_internal_errors(true);
-	$doc->loadHTML($data);
-	libxml_use_internal_errors(false);
-
-	$xpath = new DOMXPath($doc);
-	$result = $xpath->query('//p[starts-with(@class,"result__BigRate")]');
-	if($result->length > 0) {
-	  $node = $result->item(0);
-	  $value = $node->nodeValue;
-	  return explode(" ", $value)[0];
-	} else {
-	  return -1;
-	}
+function floatValue($val){
+    $val = str_replace(",",".",$val);
+    $val = preg_replace('/\.(?=.*\.)/', '', $val);
+    return floatval($val);
 }
 
 $rest = new REST();
@@ -49,8 +77,20 @@ if(isset($rest->_request['amount'])){
     $amount = (int)$rest->_request['amount'];
 }
 
-$result = convertCurrencyXE($amount, $from, $to);
+$doc = getDOMXPath($amount, $from, $to);
 
-$rest->show_response(array('result' => $result));
+$rate = getRateValue($doc);
+$date = getDateValue($doc);
+
+$rest->show_response(
+    array(
+        'from' => $from,
+        'to' => $to,
+        'amount' => $amount,
+        'date' => $date['date'],
+        'date_time' => $date['date_time'],
+        'rate' => $rate
+    )
+);
 
 ?>
