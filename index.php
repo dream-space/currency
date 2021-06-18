@@ -19,7 +19,7 @@ function getDOMXPath($amount, $from, $to){
     return $doc;
 }
 
-function getRateValue($doc){
+function getRateValue($doc) {
 	$xpath = new DOMXPath($doc);
 	$result = $xpath->query('//p[starts-with(@class,"result__BigRate")]');
 	if($result->length > 0) {
@@ -72,25 +72,44 @@ if(!isset($rest->_request['from'])) $rest->responseInvalidParam('from');
 if(!isset($rest->_request['to'])) $rest->responseInvalidParam('to');
 $from = $rest->_request['from'];
 $to = $rest->_request['to'];
+$to_arr = array();
+$multi = false;
 $amount = 1;
+
 if(isset($rest->_request['amount'])){
     $amount = floatValue($rest->_request['amount']);
 }
 
-$doc = getDOMXPath($amount, $from, $to);
+if (strpos($to, ',') !== false) {
+    $to_arr = explode(',', $to);
+    $multi = true;
+}
 
-$rate = getRateValue($doc);
-$date = getDateValue($doc);
-
-$rest->show_response(
-    array(
-        'from' => $from,
-        'to' => $to,
-        'amount' => $amount,
-        'date' => $date['date'],
-        'date_time' => $date['date_time'],
-        'rate' => $rate
-    )
+$result = array(
+    'from' => $from,
+    'to' => $to,
+    'amount' => $amount
 );
+
+if(!$multi){
+    $doc = getDOMXPath($amount, $from, $to);
+
+    $rate = getRateValue($doc);
+    $date = getDateValue($doc);
+    $result['date'] = $date['date'];
+    $result['date_time'] = $date['date_time'];
+    $result['rate'] = $rate;
+
+} else {
+    $multi = array();
+    foreach ($to_arr as $t) {
+        $doc = getDOMXPath($amount, $from, $t);
+        $rate = getRateValue($doc);
+        $multi[] = array('to' => $t, 'rate' => $rate);
+    }
+    $result['multi'] = $multi;
+}
+
+$rest->show_response($result);
 
 ?>
